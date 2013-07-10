@@ -1,6 +1,8 @@
 .border-radius(@radius) {
   -webkit-border-radius: @radius;
   -moz-border-radius: @radius;
+  -ms-border-radius: @radius;
+  -o-border-radius: @radius;
   border-radius: @radius;
 }
 
@@ -10,15 +12,32 @@
   border-top-left-radius: @radius;
 }
 
+.border-top-right-radius(@radius) {
+  -webkit-border-top-right-radius: @radius;
+  -moz-border-radius-topright: @radius;
+  border-top-right-radius: @radius;
+}
+
 .border-bottom-left-radius(@radius) {
   -webkit-border-bottom-left-radius: @radius;
   -moz-border-radius-bottomleft: @radius;
   border-bottom-left-radius: @radius;
 }
 
+.border-bottom-right-radius(@radius) {
+  -webkit-border-bottom-right-radius: @radius;
+  -moz-border-radius-bottomright: @radius;
+  border-bottom-right-radius: @radius;
+}
+
 .border-left-radius(@radius) {
   .border-top-left-radius(@radius);
   .border-bottom-left-radius(@radius);
+}
+
+.border-right-radius(@radius) {
+  .border-top-right-radius(@radius);
+  .border-bottom-right-radius(@radius);
 }
 
 // Transitions
@@ -58,7 +77,7 @@
   text-shadow: @textShadow;
   #gradient > .vertical(@primaryColor, @secondaryColor);
   border-color: @secondaryColor @secondaryColor darken(@secondaryColor, 15%);
-  border-color: rgba(0, 0, 0, .1) rgba(0, 0, 0, .1) fadein(rgba(0, 0, 0, .1), 15%);
+  //border-color: rgba(0, 0, 0, .1) rgba(0, 0, 0, .1) fadein(rgba(0, 0, 0, .1), 15%);
 }
 
 // Gradients

@@ -15,6 +15,7 @@
         return this.each(function () {
             var $element = $(this)
               , $div
+              , $slider
               , $switchLeft
               , $switchRight
               , $label
@@ -64,23 +65,26 @@
             $label = $('<label>')
               .html("&nbsp;")
               .addClass(myClasses)
+              .addClass("switch-off")
               .attr('for', $element.find('input').attr('id'));
 
             if (icon) {
               $label.html('<i class="icon icon-' + icon + '"></i>');
             }
+            $element.prepend($label);
 
-            $div = $element.find(':checkbox').wrap($('<div>')).parent().data('animated', false);
+            $slider = $element.find(':checkbox').wrap($('<div>').addClass("slider")).parent().data('animated', false);
 
             if ($element.data('animated') !== false)
-              $div.addClass('switch-animate').data('animated', true);
+              $slider.addClass('switch-animate').data('animated', true);
 
-            $div
+            $slider
               .append($switchLeft)
-              .append($label)
               .append($switchRight);
+            
+            $div = $slider.wrap($('<div>').addClass("sliderMask"));
 
-            $element.find('>div').addClass(
+            $div.addClass(
               $element.find('input').is(':checked') ? 'switch-on' : 'switch-off'
             );
 
@@ -88,7 +92,7 @@
               $(this).addClass('deactivate');
 
             var changeStatus = function ($this) {
-              $this.siblings('label').trigger('mousedown').trigger('mouseup').trigger('click');
+              $this.closest('.switch').find('label').trigger('mousedown').trigger('mouseup').trigger('click');
             };
 
             $element.on('keydown', function (e) {
@@ -111,61 +115,101 @@
               var $this = $(this)
                 , $element = $this.parent()
                 , thisState = $this.is(':checked')
-                , state = $element.is('.switch-off');
+                , state = $element.is('.switch-off')
+                , $switch = $element.closest(".switch")
+                , $label = $switch.find("label");
 
               e.preventDefault();
 
               $element.css('left', '');
 
+              if ($element.data('animated') !== false) {
+                $label.addClass("switch-animate");
+                $element.addClass("switch-animate");
+              }
+              
+              $label.trigger('switch-change', thisState);
+
               if (state === thisState) {
 
-                if (thisState)
+                if (thisState) {
                   $element.removeClass('switch-off').addClass('switch-on');
-                else $element.removeClass('switch-on').addClass('switch-off');
-
-                if ($element.data('animated') !== false)
-                  $element.addClass("switch-animate");
+                }
+                else {
+                  $element.removeClass('switch-on').addClass('switch-off');
+                }
 
                 if (typeof skipOnChange === 'boolean' && skipOnChange)
                   return;
 
-                $element.parent().trigger('switch-change', {'el': $this, 'value': thisState})
+                $switch.trigger('switch-change', {'el': $this, 'value': thisState});
+              }
+            });
+            
+            $element.find('label').on('switch-change', function (e, value) {
+              var $this = $(this)
+                , $element = $this.closest('.switch')
+                , trackLength = $element.width()
+                , sliderWidth = $this.width()
+                , sliderOffset = trackLength - sliderWidth;
+              
+              console.log(value);
+              $this.css('left' , value ? sliderOffset + "px": '1px');
+              
+              if(value) {
+                $label.removeClass('switch-off').addClass('switch-on');
+              }
+              else {
+                $label.removeClass('switch-on').addClass('switch-off');
               }
             });
 
             $element.find('label').on('mousedown touchstart', function (e) {
               var $this = $(this);
               moving = false;
-
+              
               e.preventDefault();
               e.stopImmediatePropagation();
 
-              $this.closest('div').removeClass('switch-animate');
+              $this.removeClass('switch-animate');
+              $this.siblings().children(".slider").removeClass('switch-animate');
 
               if ($this.closest('.has-switch').is('.deactivate'))
                 $this.unbind('click');
+              
               else {
+                var $element = $this.closest('.switch')
+                  , $slider = $element.find('.slider')
+                  , trackLength = $element.width()
+                  , labelWidth = $this.width()
+                  , sliderOffset = ($slider.width()-trackLength+labelWidth/2)/trackLength
+                  , labelOffset = (labelWidth/2)/trackLength
+                  , leftLimit = labelOffset
+                  , rightLimit = 1 - labelOffset;
+                
                 $this.on('mousemove touchmove', function (e) {
-                  var $element = $(this).closest('.switch')
-                    , relativeX = (e.pageX || e.originalEvent.targetTouches[0].pageX) - $element.offset().left
-                    , percent = (relativeX / $element.width()) * 100
-                    , left = 25
-                    , right = 75;
+                  var baseX = (e.pageX || e.originalEvent.targetTouches[0].pageX)
+                    , relativeX = baseX - $element.offset().left
+                    , percent = (relativeX / trackLength);
 
                   moving = true;
 
-                  if (percent < left)
-                    percent = left;
-                  else if (percent > right)
-                    percent = right;
+                  if (percent < leftLimit)
+                    percent = leftLimit;
+                  else if (percent > rightLimit)
+                    percent = rightLimit;
+                  
+                  console.log(percent + ", " + leftLimit + ", " + rightLimit);
+                  console.log(sliderOffset);
 
-                  $element.find('>div').css('left', (percent - right) + "%")
+                  // Get this using the actual label location instead of 75%
+                  $element.find('.slider').css('left', ((percent - sliderOffset) * 100) + "%");
+                  $element.find('label').css('left', ((percent - labelOffset) * 100) + "%");
                 });
 
                 $this.on('click touchend', function (e) {
                   var $this = $(this)
-                    , $target = $(e.target)
-                    , $myCheckBox = $target.siblings('input');
+                    , $myCheckBox = $this.siblings().find('input');
 
                   e.stopImmediatePropagation();
                   e.preventDefault();
@@ -173,8 +217,9 @@
                   $this.unbind('mouseleave');
 
                   if (moving)
-                    $myCheckBox.prop('checked', !(parseInt($this.parent().css('left')) < -25));
-                  else $myCheckBox.prop("checked", !$myCheckBox.is(":checked"));
+                    $myCheckBox.prop('checked', !(parseInt($myCheckBox.parent().css('left')) < -25));
+                  else 
+                    $myCheckBox.prop("checked", !$myCheckBox.is(":checked"));
 
                   moving = false;
                   $myCheckBox.trigger('change');
@@ -182,7 +227,7 @@
 
                 $this.on('mouseleave', function (e) {
                   var $this = $(this)
-                    , $myCheckBox = $this.siblings('input');
+                    , $myCheckBox = $this.siblings().find('input');
 
                   e.preventDefault();
                   e.stopImmediatePropagation();
@@ -190,7 +235,7 @@
                   $this.unbind('mouseleave');
                   $this.trigger('mouseup');
 
-                  $myCheckBox.prop('checked', !(parseInt($this.parent().css('left')) < -25)).trigger('change');
+                  $myCheckBox.prop('checked', !(parseInt($myCheckBox.parent().css('left')) < -25)).trigger('change');
                 });
 
                 $this.on('mouseup', function (e) {
